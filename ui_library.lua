@@ -253,16 +253,13 @@ local Passed, Statement = pcall(function()
 			local function startDrag(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					Window.Dragging = true
-					local mousePos = uis:GetMouseLocation()
-					local objPos = ScreenGui_MainFrame.AbsolutePosition
-					Window.DragOffset = mousePos - objPos
+					Window.DragOffset = input.Position - ScreenGui_MainFrame.AbsolutePosition
 				end
 			end
 			
 			local function updateDrag(input)
-				if input.UserInputType == Enum.UserInputType.MouseMovement and Window.Dragging and Window.DragOffset then
-					local mousePos = uis:GetMouseLocation()
-					local newPos = mousePos - Window.DragOffset
+				if Window.Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+					local newPos = input.Position - Window.DragOffset
 					ScreenGui_MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
 				end
 			end
@@ -270,7 +267,6 @@ local Passed, Statement = pcall(function()
 			local function stopDrag(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					Window.Dragging = false
-					Window.DragOffset = nil
 				end
 			end
 			
