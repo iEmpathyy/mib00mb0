@@ -1,4 +1,4 @@
-local library = require(script.Parent.ui_library)
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/iEmpathyy/mib00mb0/refs/heads/main/ui_library.lua")()
 
 local window = library:CreateWindow({})
 
