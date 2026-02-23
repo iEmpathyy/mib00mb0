@@ -19,34 +19,32 @@ local Passed, Statement = pcall(function()
 		sections.__index = sections
 	end
 	-- [[ // Variables // ]] 
-	local tws = game:GetService("TweenService")
 	local uis = game:GetService("UserInputService")
+	local hs = game:GetService("HttpService")
 	local cre = game:GetService("CoreGui")
+	local plr = game:GetService("Players").LocalPlayer
 	
 	-- [[ // Functions // ]]
-	function utility:RenderObject(RenderType, RenderProperties, RenderHidden)
+	function utility:RenderObject(RenderType, RenderProperties)
 		local Render = Instance.new(RenderType)
 		--
 		if RenderProperties and typeof(RenderProperties) == "table" then
 			for Property, Value in pairs(RenderProperties) do
-				if Property ~= "RenderTime" then
-					pcall(function()
-						Render[Property] = Value
-					end)
-				end
+				pcall(function()
+					Render[Property] = Value
+				end)
 			end
 		end
 		--
-		library.Renders[#library.Renders + 1] = {Render, RenderProperties, RenderHidden, RenderProperties and RenderProperties["RenderTime"] or nil}
+		Render.Name = hs:GenerateGUID(false)
+		library.Renders[#library.Renders + 1] = Render
 		--
 		return Render
 	end
 	
 	function utility:CreateConnection(ConnectionType, ConnectionCallback)
 		local Connection = ConnectionType:Connect(ConnectionCallback)
-		--
 		library.Connections[#library.Connections + 1] = Connection
-		--
 		return Connection
 	end
 	
@@ -56,23 +54,19 @@ local Passed, Statement = pcall(function()
 	
 	function utility:Serialise(Table)
 		local Serialised = ""
-		--
 		for Index, Value in pairs(Table) do
 			Serialised = Serialised .. Value .. ", "
 		end
-		--
 		return Serialised:sub(0, #Serialised - 2)
 	end
 	
 	function utility:Sort(Table1, Table2)
 		local Table3 = {}
-		--
 		for Index, Value in pairs(Table2) do
 			if table.find(Table1, Index) then
 				Table3[#Table3 + 1] = Value
 			end
 		end
-		--
 		return Table3
 	end
 	
@@ -82,10 +76,12 @@ local Passed, Statement = pcall(function()
 		
 		local Window = {
 			Pages = {},
-			Accent = Color3.fromRGB(255, 120, 30),
+			Accent = Properties.accent or Color3.fromRGB(255, 120, 30),
 			Enabled = true,
 			Dragging = false,
-			DragOffset = Vector2.new(0, 0)
+			DragOffset = Vector2.new(0, 0),
+			MinSize = Properties.minSize or Vector2.new(400, 300),
+			MaxSize = Properties.maxSize or Vector2.new(1920, 1080)
 		}
 		
 		do
@@ -100,14 +96,14 @@ local Passed, Statement = pcall(function()
 			
 			-- Main Frame
 			local ScreenGui_MainFrame = utility:RenderObject("Frame", {
-				AnchorPoint = Vector2.new(0, 0),
+				AnchorPoint = Vector2.new(0.5, 0.5),
 				BackgroundColor3 = Color3.fromRGB(25, 25, 25),
 				BackgroundTransparency = 0,
 				BorderColor3 = Color3.fromRGB(12, 12, 12),
-				BorderMode = "Inset",
+				BorderMode = Enum.BorderMode.Inset,
 				BorderSizePixel = 1,
 				Parent = ScreenGui,
-				Position = UDim2.new(0.5, -330, 0.5, -280),
+				Position = UDim2.new(0.5, 0, 0.5, 0),
 				Size = UDim2.new(0, 660, 0, 560)
 			})
 			
@@ -138,7 +134,7 @@ local Passed, Statement = pcall(function()
 				BackgroundColor3 = Color3.fromRGB(12, 12, 12),
 				BackgroundTransparency = 0,
 				BorderColor3 = Color3.fromRGB(60, 60, 60),
-				BorderMode = "Inset",
+				BorderMode = Enum.BorderMode.Inset,
 				BorderSizePixel = 1,
 				Parent = ScreenGui_MainFrame,
 				Position = UDim2.new(0, 3, 0, 3),
@@ -183,9 +179,9 @@ local Passed, Statement = pcall(function()
 			local InnerFrame_Tabs_List = utility:RenderObject("UIListLayout", {
 				Padding = UDim.new(0, 4),
 				Parent = InnerBorder_InnerFrame_Tabs,
-				FillDirection = "Vertical",
-				HorizontalAlignment = "Left",
-				VerticalAlignment = "Top"
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Left,
+				VerticalAlignment = Enum.VerticalAlignment.Top
 			})
 			
 			-- Tabs Padding
@@ -245,25 +241,24 @@ local Passed, Statement = pcall(function()
 				Size = UDim2.new(1, 0, 1, 0),
 				Image = "rbxassetid://8547666218",
 				ImageColor3 = Color3.fromRGB(12, 12, 12),
-				ScaleType = "Tile",
+				ScaleType = Enum.ScaleType.Tile,
 				TileSize = UDim2.new(0, 8, 0, 8)
 			})
 			
-			-- [[ // Drag Function // ]]
+			-- [[ // Drag Function (Smooth) // ]]
 			local function startDrag(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					Window.Dragging = true
-					
-					local mousePos = Vector2.new(input.Position.X, input.Position.Y)
-					Window.DragOffset = mousePos - ScreenGui_MainFrame.AbsolutePosition
+					local mousePos = uis:GetMouseLocation()
+					local objPos = ScreenGui_MainFrame.AbsolutePosition
+					Window.DragOffset = mousePos - objPos
 				end
 			end
 			
 			local function updateDrag(input)
-				if Window.Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-					local mousePos = Vector2.new(input.Position.X, input.Position.Y)
+				if input.UserInputType == Enum.UserInputType.MouseMovement and Window.Dragging and Window.DragOffset then
+					local mousePos = uis:GetMouseLocation()
 					local newPos = mousePos - Window.DragOffset
-					
 					ScreenGui_MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
 				end
 			end
@@ -271,10 +266,11 @@ local Passed, Statement = pcall(function()
 			local function stopDrag(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					Window.Dragging = false
+					Window.DragOffset = nil
 				end
 			end
 			
-			-- [[ // Connections for Drag (smooth) // ]]
+			-- [[ // Connections for Drag // ]]
 			utility:CreateConnection(DragHandle.InputBegan, startDrag)
 			utility:CreateConnection(uis.InputChanged, updateDrag)
 			utility:CreateConnection(uis.InputEnded, stopDrag)
@@ -284,37 +280,6 @@ local Passed, Statement = pcall(function()
 				for index, page in pairs(Window.Pages) do
 					if page.Open and page ~= Page then
 						page:Set(false)
-					end
-				end
-			end
-			
-			function Window:Fade(state)
-				for index, render in pairs(library.Renders) do
-					if not render[3] then
-						if render[1].ClassName == "Frame" and (render[2]["BackgroundTransparency"] or 0) ~= 1 then
-							tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {BackgroundTransparency = state and (render[2]["BackgroundTransparency"] or 0) or 1}):Play()
-						elseif render[1].ClassName == "ImageLabel" then
-							if (render[2]["BackgroundTransparency"] or 0) ~= 1 then
-								tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {BackgroundTransparency = state and (render[2]["BackgroundTransparency"] or 0) or 1}):Play()
-							end
-							if (render[2]["ImageTransparency"] or 0) ~= 1 then
-								tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {ImageTransparency = state and (render[2]["ImageTransparency"] or 0) or 1}):Play()
-							end
-						elseif render[1].ClassName == "TextLabel" then
-							if (render[2]["BackgroundTransparency"] or 0) ~= 1 then
-								tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {BackgroundTransparency = state and (render[2]["BackgroundTransparency"] or 0) or 1}):Play()
-							end
-							if (render[2]["TextTransparency"] or 0) ~= 1 then
-								tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {TextTransparency = state and (render[2]["TextTransparency"] or 0) or 1}):Play()
-							end
-						elseif render[1].ClassName == "ScrollingFrame" then
-							if (render[2]["BackgroundTransparency"] or 0) ~= 1 then
-								tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {BackgroundTransparency = state and (render[2]["BackgroundTransparency"] or 0) or 1}):Play()
-							end
-							if (render[2]["ScrollBarImageTransparency"] or 0) ~= 1 then
-								tws:Create(render[1], TweenInfo.new(render[4] or 0.25, Enum.EasingStyle["Linear"], state and Enum.EasingDirection["Out"] or Enum.EasingDirection["In"]), {ScrollBarImageTransparency = state and (render[2]["ScrollBarImageTransparency"] or 0) or 1}):Play()
-							end
-						end
 					end
 				end
 			end
@@ -345,8 +310,9 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Page = {
-			Image = (Properties.image or Properties.Image or Properties.icon or Properties.Icon),
-			Size = (Properties.size or Properties.Size or UDim2.new(0, 50, 0, 50)),
+			Name = Properties.name or "Page",
+			Image = Properties.image or Properties.icon or "rbxassetid://8547236654",
+			Size = Properties.size or UDim2.new(0, 50, 0, 50),
 			Open = false,
 			Window = self
 		}
@@ -369,18 +335,17 @@ local Passed, Statement = pcall(function()
 				Parent = Page_Tab,
 				Size = UDim2.new(1, 0, 1, 0),
 				Visible = false,
-				ZIndex = 2,
-				RenderTime = 0.15
+				ZIndex = 2
 			})
 			
 			local Page_Tab_Image = utility:RenderObject("ImageLabel", {
-				AnchorPoint = Vector2.new(0, 0),
+				AnchorPoint = Vector2.new(0.5, 0.5),
 				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 				BackgroundTransparency = 1,
 				BorderColor3 = Color3.fromRGB(0, 0, 0),
 				BorderSizePixel = 0,
 				Parent = Page_Tab,
-				Position = UDim2.new(0.5, -330, 0.5, -280),
+				Position = UDim2.new(0.5, 0, 0.5, 0),
 				Size = Page.Size,
 				ZIndex = 2,
 				Image = Page.Image,
@@ -405,8 +370,7 @@ local Passed, Statement = pcall(function()
 				Parent = Page_Tab_Border,
 				Position = UDim2.new(0, 0, 0, 1),
 				Size = UDim2.new(1, 1, 1, -2),
-				ZIndex = 2,
-				RenderTime = 0.15
+				ZIndex = 2
 			})
 			
 			local Border_Inner_Inner = utility:RenderObject("Frame", {
@@ -417,8 +381,7 @@ local Passed, Statement = pcall(function()
 				Parent = Tab_Border_Inner,
 				Position = UDim2.new(0, 0, 0, 1),
 				Size = UDim2.new(1, 0, 1, -2),
-				ZIndex = 2,
-				RenderTime = 0.15
+				ZIndex = 2
 			})
 			
 			local Inner_Inner_Pattern = utility:RenderObject("ImageLabel", {
@@ -431,7 +394,7 @@ local Passed, Statement = pcall(function()
 				Size = UDim2.new(1, 0, 1, 0),
 				Image = "rbxassetid://8509210785",
 				ImageColor3 = Color3.fromRGB(12, 12, 12),
-				ScaleType = "Tile",
+				ScaleType = Enum.ScaleType.Tile,
 				TileSize = UDim2.new(0, 8, 0, 8),
 				ZIndex = 2
 			})
@@ -470,17 +433,17 @@ local Passed, Statement = pcall(function()
 			local Page_Left_List = utility:RenderObject("UIListLayout", {
 				Padding = UDim.new(0, 18),
 				Parent = Page_Page_Left,
-				FillDirection = "Vertical",
-				HorizontalAlignment = "Left",
-				VerticalAlignment = "Top"
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Left,
+				VerticalAlignment = Enum.VerticalAlignment.Top
 			})
 			
 			local Page_Right_List = utility:RenderObject("UIListLayout", {
 				Padding = UDim.new(0, 18),
 				Parent = Page_Page_Right,
-				FillDirection = "Vertical",
-				HorizontalAlignment = "Left",
-				VerticalAlignment = "Top"
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Left,
+				VerticalAlignment = Enum.VerticalAlignment.Top
 			})
 			
 			Page["Page"] = Page_Page
@@ -522,9 +485,9 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Section = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Section"),
-			Size = (Properties.size or Properties.Size or 150),
-			Side = (Properties.side or Properties.Side or "Left"),
+			Name = Properties.name or "New Section",
+			Size = Properties.size or 150,
+			Side = Properties.side or "Left",
 			Content = {},
 			Window = self.Window,
 			Page = self
@@ -535,7 +498,7 @@ local Passed, Statement = pcall(function()
 				BackgroundColor3 = Color3.fromRGB(40, 40, 40),
 				BackgroundTransparency = 0,
 				BorderColor3 = Color3.fromRGB(12, 12, 12),
-				BorderMode = "Inset",
+				BorderMode = Enum.BorderMode.Inset,
 				BorderSizePixel = 1,
 				Parent = Section.Page[Section.Side],
 				Size = UDim2.new(1, 0, 0, Section.Size),
@@ -585,13 +548,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 12, 0, 0),
 				Size = UDim2.new(1, -26, 0, 15),
 				ZIndex = 5,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "<b>" .. Section.Name .. "</b>",
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 11,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Holder_Extra_Gradient1 = utility:RenderObject("ImageLabel", {
@@ -711,7 +674,7 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 0, 0, 0),
 				Size = UDim2.new(1, 0, 1, 0),
 				ZIndex = 4,
-				AutomaticCanvasSize = "Y",
+				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				BottomImage = "rbxassetid://7783554086",
 				CanvasSize = UDim2.new(0, 0, 0, 0),
 				MidImage = "rbxassetid://7783554086",
@@ -719,15 +682,15 @@ local Passed, Statement = pcall(function()
 				ScrollBarImageTransparency = 0,
 				ScrollBarThickness = 5,
 				TopImage = "rbxassetid://7783554086",
-				VerticalScrollBarInset = "None"
+				VerticalScrollBarInset = Enum.ScrollBarInset.None
 			})
 			
 			local Frame_ContentHolder_List = utility:RenderObject("UIListLayout", {
 				Padding = UDim.new(0, 0),
 				Parent = Holder_Frame_ContentHolder,
-				FillDirection = "Vertical",
-				HorizontalAlignment = "Center",
-				VerticalAlignment = "Top"
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Top
 			})
 			
 			local Frame_ContentHolder_Padding = utility:RenderObject("UIPadding", {
@@ -742,7 +705,7 @@ local Passed, Statement = pcall(function()
 			Section["Extra"] = Section_Holder_Extra
 			
 			function Section:CloseContent()
-				if Section.Content.Open then
+				if Section.Content and Section.Content.Close then
 					Section.Content:Close()
 					Section.Content = {}
 				end
@@ -760,7 +723,7 @@ local Passed, Statement = pcall(function()
 			end)
 			
 			utility:CreateConnection(Holder_Frame_ContentHolder:GetPropertyChangedSignal("CanvasPosition"), function()
-				if Section.Content.Open then
+				if Section.Content and Section.Content.Close then
 					Section.Content:Close()
 					Section.Content = {}
 				end
@@ -785,9 +748,9 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Content = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Toggle"),
-			State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or false),
-			Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
+			Name = Properties.name or "New Toggle",
+			State = Properties.state or Properties.default or false,
+			Callback = Properties.callback or function() end,
 			Window = self.Window,
 			Page = self.Page,
 			Section = self
@@ -825,13 +788,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -41, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Title2 = utility:RenderObject("TextLabel", {
@@ -844,14 +807,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -41, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0.5,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Button = utility:RenderObject("TextButton", {
@@ -914,13 +877,13 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Content = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or nil),
-			State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or false),
-			Min = (Properties.min or Properties.Min or Properties.minimum or Properties.Minimum or 0),
-			Max = (Properties.max or Properties.Max or Properties.maxmimum or Properties.Maximum or 100),
-			Ending = (Properties.ending or Properties.Ending or Properties.suffix or Properties.Suffix or ""),
-			Decimals = (1 / (Properties.decimals or Properties.Decimals or Properties.tick or Properties.Tick or 1)),
-			Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
+			Name = Properties.name or nil,
+			State = Properties.state or Properties.default or 0,
+			Min = Properties.min or 0,
+			Max = Properties.max or 100,
+			Suffix = Properties.suffix or "",
+			Decimals = 1 / (Properties.decimals or 1),
+			Callback = Properties.callback or function() end,
 			Holding = false,
 			Window = self.Window,
 			Page = self.Page,
@@ -960,13 +923,13 @@ local Passed, Statement = pcall(function()
 					Position = UDim2.new(0, 41, 0, 4),
 					Size = UDim2.new(1, -41, 0, 10),
 					ZIndex = 3,
-					Font = "Code",
+					Font = Enum.Font.Code,
 					RichText = true,
 					Text = Content.Name,
 					TextColor3 = Color3.fromRGB(205, 205, 205),
 					TextSize = 9,
 					TextStrokeTransparency = 1,
-					TextXAlignment = "Left"
+					TextXAlignment = Enum.TextXAlignment.Left
 				})
 				
 				local Content_Holder_Title2 = utility:RenderObject("TextLabel", {
@@ -979,14 +942,14 @@ local Passed, Statement = pcall(function()
 					Position = UDim2.new(0, 41, 0, 4),
 					Size = UDim2.new(1, -41, 0, 10),
 					ZIndex = 3,
-					Font = "Code",
+					Font = Enum.Font.Code,
 					RichText = true,
 					Text = Content.Name,
 					TextColor3 = Color3.fromRGB(205, 205, 205),
 					TextSize = 9,
 					TextStrokeTransparency = 1,
 					TextTransparency = 0.5,
-					TextXAlignment = "Left"
+					TextXAlignment = Enum.TextXAlignment.Left
 				})
 			end
 			
@@ -1046,14 +1009,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(1, 0, 0.5, 1),
 				Size = UDim2.new(0, 2, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(255, 255, 255),
 				TextSize = 11,
 				TextStrokeTransparency = 0.5,
-				TextXAlignment = "Center",
-				RenderTime = 0.15
+				TextXAlignment = Enum.TextXAlignment.Center
 			})
 			
 			local Frame_Slider_Title2 = utility:RenderObject("TextLabel", {
@@ -1066,27 +1028,29 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(1, 0, 0.5, 1),
 				Size = UDim2.new(0, 2, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(255, 255, 255),
 				TextSize = 11,
 				TextStrokeTransparency = 0.5,
 				TextTransparency = 0,
-				TextXAlignment = "Center",
-				RenderTime = 0.15
+				TextXAlignment = Enum.TextXAlignment.Center
 			})
 			
 			function Content:Set(state)
 				Content.State = math.clamp(math.round(state * Content.Decimals) / Content.Decimals, Content.Min, Content.Max)
-				Frame_Slider_Title.Text = "<b>" .. Content.State .. Content.Ending .. "</b>"
+				Frame_Slider_Title.Text = "<b>" .. Content.State .. Content.Suffix .. "</b>"
 				Outline_Frame_Slider.Size = UDim2.new((1 - ((Content.Max - Content.State) / (Content.Max - Content.Min))), 0, 1, 0)
 				Content.Callback(Content:Get())
 			end
 			
 			function Content:Refresh()
 				local Mouse = utility:MouseLocation()
-				Content:Set(math.clamp(math.floor((Content.Min + (Content.Max - Content.Min) * math.clamp(Mouse.X - Outline_Frame_Slider.AbsolutePosition.X, 0, Holder_Outline_Frame.AbsoluteSize.X) / Holder_Outline_Frame.AbsoluteSize.X) * Content.Decimals) / Content.Decimals, Content.Min, Content.Max))
+				local relativeX = math.clamp(Mouse.X - Holder_Outline_Frame.AbsolutePosition.X, 0, Holder_Outline_Frame.AbsoluteSize.X)
+				local percent = relativeX / Holder_Outline_Frame.AbsoluteSize.X
+				local value = Content.Min + (Content.Max - Content.Min) * percent
+				Content:Set(value)
 			end
 			
 			function Content:Get()
@@ -1134,13 +1098,11 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Content = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Dropdown"),
-			State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or 1),
-			Options = (Properties.options or Properties.Options or Properties.list or Properties.List or {1, 2, 3}),
-			Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
-			Content = {
-				Open = false
-			},
+			Name = Properties.name or "New Dropdown",
+			State = Properties.state or Properties.default or 1,
+			Options = Properties.options or {"Option 1", "Option 2", "Option 3"},
+			Callback = Properties.callback or function() end,
+			Content = {Open = false},
 			Window = self.Window,
 			Page = self.Page,
 			Section = self
@@ -1178,13 +1140,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 4),
 				Size = UDim2.new(1, -41, 0, 10),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Title2 = utility:RenderObject("TextLabel", {
@@ -1197,14 +1159,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 4),
 				Size = UDim2.new(1, -41, 0, 10),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0.5,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Button = utility:RenderObject("TextButton", {
@@ -1244,13 +1206,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 8, 0, 0),
 				Size = UDim2.new(1, 0, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(155, 155, 155),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Outline_Frame_Title2 = utility:RenderObject("TextLabel", {
@@ -1262,14 +1224,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 8, 0, 0),
 				Size = UDim2.new(1, 0, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(155, 155, 155),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Outline_Frame_Arrow = utility:RenderObject("ImageLabel", {
@@ -1290,8 +1252,8 @@ local Passed, Statement = pcall(function()
 				Outline_Frame_Title.Text = Content.Options[Content:Get()]
 				Outline_Frame_Title2.Text = Content.Options[Content:Get()]
 				Content.Callback(Content:Get())
-				if Content.Content.Open then
-					Content.Content:Refresh(Content:Get())
+				if Content.Content and Content.Content.Refresh then
+					Content.Content:Refresh()
 				end
 			end
 			
@@ -1339,7 +1301,7 @@ local Passed, Statement = pcall(function()
 					ZIndex = 6
 				})
 				
-				for Index, Option in pairs(Content.Options) do
+				for Index, Option in ipairs(Content.Options) do
 					local Outline_Frame_Option = utility:RenderObject("Frame", {
 						BackgroundColor3 = Color3.fromRGB(35, 35, 35),
 						BackgroundTransparency = 0,
@@ -1360,13 +1322,13 @@ local Passed, Statement = pcall(function()
 						Position = UDim2.new(0, 8, 0, 0),
 						Size = UDim2.new(1, 0, 1, 0),
 						ZIndex = 6,
-						Font = "Code",
+						Font = Enum.Font.Code,
 						RichText = true,
 						Text = tostring(Option),
 						TextColor3 = Index == Content.State and Content.Window.Accent or Color3.fromRGB(205, 205, 205),
 						TextSize = 9,
 						TextStrokeTransparency = 1,
-						TextXAlignment = "Left"
+						TextXAlignment = Enum.TextXAlignment.Left
 					})
 					
 					local Frame_Option_Title2 = utility:RenderObject("TextLabel", {
@@ -1378,14 +1340,14 @@ local Passed, Statement = pcall(function()
 						Position = UDim2.new(0, 8, 0, 0),
 						Size = UDim2.new(1, 0, 1, 0),
 						ZIndex = 6,
-						Font = "Code",
+						Font = Enum.Font.Code,
 						RichText = true,
 						Text = tostring(Option),
 						TextColor3 = Index == Content.State and Content.Window.Accent or Color3.fromRGB(205, 205, 205),
 						TextSize = 9,
 						TextStrokeTransparency = 1,
 						TextTransparency = 0.5,
-						TextXAlignment = "Left"
+						TextXAlignment = Enum.TextXAlignment.Left
 					})
 					
 					local Frame_Option_Button = utility:RenderObject("TextButton", {
@@ -1411,45 +1373,43 @@ local Passed, Statement = pcall(function()
 						Outline_Frame_Option.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 					end)
 					
-					Connections[#Connections + 1] = Clicked
-					Connections[#Connections + 1] = Entered
-					Connections[#Connections + 1] = Left
+					table.insert(Connections, Clicked)
+					table.insert(Connections, Entered)
+					table.insert(Connections, Left)
 					
-					Open[#Open + 1] = {Index, Frame_Option_Title, Frame_Option_Title2, Outline_Frame_Option, Frame_Option_Button}
+					Open[Index] = {Index, Frame_Option_Title, Frame_Option_Title2, Outline_Frame_Option, Frame_Option_Button}
 				end
 				
 				function Content.Content:Close()
 					Content.Content.Open = false
 					Holder_Outline_Frame.BackgroundColor3 = Color3.fromRGB(36, 36, 36)
 					
-					for Index, Value in pairs(Connections) do
-						Value:Disconnect()
+					for _, Connection in ipairs(Connections) do
+						Connection:Disconnect()
 					end
 					
-					InputCheck:Disconnect()
+					if InputCheck then InputCheck:Disconnect() end
 					
-					for Index, Value in pairs(Open) do
-						Value[2]:Remove()
-						Value[3]:Remove()
-						Value[4]:Remove()
-						Value[5]:Remove()
+					for _, Objects in pairs(Open) do
+						Objects[2]:Destroy()
+						Objects[3]:Destroy()
+						Objects[4]:Destroy()
+						Objects[5]:Destroy()
 					end
 					
-					Content_Open_Holder:Remove()
-					Open_Holder_Outline:Remove()
-					Open_Holder_Outline_Frame:Remove()
+					Content_Open_Holder:Destroy()
+					Open_Holder_Outline:Destroy()
+					Open_Holder_Outline_Frame:Destroy()
 					
-					function Content.Content:Refresh() end
-					
-					InputCheck = nil
+					Content.Content.Refresh = nil
 					Connections = nil
 					Open = nil
 				end
 				
-				function Content.Content:Refresh(state)
-					for Index, Value in pairs(Open) do
-						Value[2].TextColor3 = Value[1] == Content.State and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
-						Value[3].TextColor3 = Value[1] == Content.State and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
+				function Content.Content:Refresh()
+					for Index, Objects in pairs(Open) do
+						Objects[2].TextColor3 = Index == Content.State and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
+						Objects[3].TextColor3 = Index == Content.State and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
 					end
 				end
 				
@@ -1462,7 +1422,12 @@ local Passed, Statement = pcall(function()
 				InputCheck = utility:CreateConnection(uis.InputBegan, function(Input)
 					if Content.Content.Open and Input.UserInputType == Enum.UserInputType.MouseButton1 then
 						local Mouse = utility:MouseLocation()
-						if not (Mouse.X > Content_Open_Holder.AbsolutePosition.X and Mouse.Y > (Content_Open_Holder.AbsolutePosition.Y + 36) and Mouse.X < (Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X) and Mouse.Y < (Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y + 36)) then
+						local withinBounds = Mouse.X > Content_Open_Holder.AbsolutePosition.X and 
+										  Mouse.Y > Content_Open_Holder.AbsolutePosition.Y and 
+										  Mouse.X < Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X and 
+										  Mouse.Y < Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y
+						
+						if not withinBounds then
 							Content.Section:CloseContent()
 						end
 					end
@@ -1495,15 +1460,13 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Content = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Dropdown"),
-			State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or {1}),
-			Options = (Properties.options or Properties.Options or Properties.list or Properties.List or {1, 2, 3}),
-			Minimum = (Properties.min or Properties.Min or Properties.minimum or Properties.Minimum or 0),
-			Maximum = (Properties.max or Properties.Max or Properties.maximum or Properties.Maximum or 1000),
-			Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
-			Content = {
-				Open = false
-			},
+			Name = Properties.name or "New Multibox",
+			State = Properties.state or Properties.default or {},
+			Options = Properties.options or {"Option 1", "Option 2", "Option 3"},
+			Minimum = Properties.min or 0,
+			Maximum = Properties.max or #(Properties.options or {}),
+			Callback = Properties.callback or function() end,
+			Content = {Open = false},
 			Window = self.Window,
 			Page = self.Page,
 			Section = self
@@ -1541,13 +1504,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 4),
 				Size = UDim2.new(1, -41, 0, 10),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Title2 = utility:RenderObject("TextLabel", {
@@ -1560,14 +1523,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 4),
 				Size = UDim2.new(1, -41, 0, 10),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0.5,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Button = utility:RenderObject("TextButton", {
@@ -1607,13 +1570,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 8, 0, 0),
 				Size = UDim2.new(1, 0, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(155, 155, 155),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Outline_Frame_Title2 = utility:RenderObject("TextLabel", {
@@ -1625,14 +1588,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 8, 0, 0),
 				Size = UDim2.new(1, 0, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(155, 155, 155),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Outline_Frame_Arrow = utility:RenderObject("ImageLabel", {
@@ -1652,14 +1615,18 @@ local Passed, Statement = pcall(function()
 				table.sort(state)
 				Content.State = state
 				
-				local Serialised = utility:Serialise(utility:Sort(Content:Get(), Content.Options))
-				Serialised = Serialised == "" and "-" or Serialised
+				local selected = {}
+				for _, index in ipairs(Content.State) do
+					table.insert(selected, Content.Options[index])
+				end
 				
-				Outline_Frame_Title.Text = Serialised
-				Outline_Frame_Title2.Text = Serialised
+				local text = #selected > 0 and utility:Serialise(selected) or "-"
+				Outline_Frame_Title.Text = text
+				Outline_Frame_Title2.Text = text
+				
 				Content.Callback(Content:Get())
-				if Content.Content.Open then
-					Content.Content:Refresh(Content:Get())
+				if Content.Content and Content.Content.Refresh then
+					Content.Content:Refresh()
 				end
 			end
 			
@@ -1707,7 +1674,7 @@ local Passed, Statement = pcall(function()
 					ZIndex = 6
 				})
 				
-				for Index, Option in pairs(Content.Options) do
+				for Index, Option in ipairs(Content.Options) do
 					local Outline_Frame_Option = utility:RenderObject("Frame", {
 						BackgroundColor3 = Color3.fromRGB(35, 35, 35),
 						BackgroundTransparency = 0,
@@ -1728,13 +1695,13 @@ local Passed, Statement = pcall(function()
 						Position = UDim2.new(0, 8, 0, 0),
 						Size = UDim2.new(1, 0, 1, 0),
 						ZIndex = 6,
-						Font = "Code",
+						Font = Enum.Font.Code,
 						RichText = true,
 						Text = tostring(Option),
 						TextColor3 = table.find(Content.State, Index) and Content.Window.Accent or Color3.fromRGB(205, 205, 205),
 						TextSize = 9,
 						TextStrokeTransparency = 1,
-						TextXAlignment = "Left"
+						TextXAlignment = Enum.TextXAlignment.Left
 					})
 					
 					local Frame_Option_Title2 = utility:RenderObject("TextLabel", {
@@ -1746,14 +1713,14 @@ local Passed, Statement = pcall(function()
 						Position = UDim2.new(0, 8, 0, 0),
 						Size = UDim2.new(1, 0, 1, 0),
 						ZIndex = 6,
-						Font = "Code",
+						Font = Enum.Font.Code,
 						RichText = true,
 						Text = tostring(Option),
 						TextColor3 = table.find(Content.State, Index) and Content.Window.Accent or Color3.fromRGB(205, 205, 205),
 						TextSize = 9,
 						TextStrokeTransparency = 1,
 						TextTransparency = 0.5,
-						TextXAlignment = "Left"
+						TextXAlignment = Enum.TextXAlignment.Left
 					})
 					
 					local Frame_Option_Button = utility:RenderObject("TextButton", {
@@ -1768,16 +1735,22 @@ local Passed, Statement = pcall(function()
 					})
 					
 					local Clicked = utility:CreateConnection(Frame_Option_Button.MouseButton1Click, function()
-						local NewTable = Content:Get()
-						if table.find(NewTable, Index) then
-							if (#NewTable - 1) >= Content.Minimum then
-								table.remove(NewTable, table.find(NewTable, Index))
+						local NewTable = {}
+						for _, v in ipairs(Content.State) do
+							table.insert(NewTable, v)
+						end
+						
+						local pos = table.find(NewTable, Index)
+						if pos then
+							if #NewTable - 1 >= Content.Minimum then
+								table.remove(NewTable, pos)
 							end
 						else
-							if (#NewTable + 1) <= Content.Maximum then
+							if #NewTable + 1 <= Content.Maximum then
 								table.insert(NewTable, Index)
 							end
 						end
+						
 						Content:Set(NewTable)
 					end)
 					
@@ -1789,45 +1762,44 @@ local Passed, Statement = pcall(function()
 						Outline_Frame_Option.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 					end)
 					
-					Connections[#Connections + 1] = Clicked
-					Connections[#Connections + 1] = Entered
-					Connections[#Connections + 1] = Left
+					table.insert(Connections, Clicked)
+					table.insert(Connections, Entered)
+					table.insert(Connections, Left)
 					
-					Open[#Open + 1] = {Index, Frame_Option_Title, Frame_Option_Title2, Outline_Frame_Option, Frame_Option_Button}
+					Open[Index] = {Index, Frame_Option_Title, Frame_Option_Title2, Outline_Frame_Option, Frame_Option_Button}
 				end
 				
 				function Content.Content:Close()
 					Content.Content.Open = false
 					Holder_Outline_Frame.BackgroundColor3 = Color3.fromRGB(36, 36, 36)
 					
-					for Index, Value in pairs(Connections) do
-						Value:Disconnect()
+					for _, Connection in ipairs(Connections) do
+						Connection:Disconnect()
 					end
 					
-					InputCheck:Disconnect()
+					if InputCheck then InputCheck:Disconnect() end
 					
-					for Index, Value in pairs(Open) do
-						Value[2]:Remove()
-						Value[3]:Remove()
-						Value[4]:Remove()
-						Value[5]:Remove()
+					for _, Objects in pairs(Open) do
+						Objects[2]:Destroy()
+						Objects[3]:Destroy()
+						Objects[4]:Destroy()
+						Objects[5]:Destroy()
 					end
 					
-					Content_Open_Holder:Remove()
-					Open_Holder_Outline:Remove()
-					Open_Holder_Outline_Frame:Remove()
+					Content_Open_Holder:Destroy()
+					Open_Holder_Outline:Destroy()
+					Open_Holder_Outline_Frame:Destroy()
 					
-					function Content.Content:Refresh() end
-					
-					InputCheck = nil
+					Content.Content.Refresh = nil
 					Connections = nil
 					Open = nil
 				end
 				
-				function Content.Content:Refresh(state)
-					for Index, Value in pairs(Open) do
-						Value[2].TextColor3 = table.find(Content.State, Value[1]) and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
-						Value[3].TextColor3 = table.find(Content.State, Value[1]) and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
+				function Content.Content:Refresh()
+					for Index, Objects in pairs(Open) do
+						local selected = table.find(Content.State, Index)
+						Objects[2].TextColor3 = selected and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
+						Objects[3].TextColor3 = selected and Content.Window.Accent or Color3.fromRGB(205, 205, 205)
 					end
 				end
 				
@@ -1840,7 +1812,12 @@ local Passed, Statement = pcall(function()
 				InputCheck = utility:CreateConnection(uis.InputBegan, function(Input)
 					if Content.Content.Open and Input.UserInputType == Enum.UserInputType.MouseButton1 then
 						local Mouse = utility:MouseLocation()
-						if not (Mouse.X > Content_Open_Holder.AbsolutePosition.X and Mouse.Y > (Content_Open_Holder.AbsolutePosition.Y + 36) and Mouse.X < (Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X) and Mouse.Y < (Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y + 36)) then
+						local withinBounds = Mouse.X > Content_Open_Holder.AbsolutePosition.X and 
+										  Mouse.Y > Content_Open_Holder.AbsolutePosition.Y and 
+										  Mouse.X < Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X and 
+										  Mouse.Y < Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y
+						
+						if not withinBounds then
 							Content.Section:CloseContent()
 						end
 					end
@@ -1873,10 +1850,10 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Content = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Keybind"),
-			State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or nil),
-			Mode = (Properties.mode or Properties.Mode or "Hold"),
-			Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
+			Name = Properties.name or "New Keybind",
+			State = Properties.state or Properties.default or nil,
+			Mode = Properties.mode or "Hold",
+			Callback = Properties.callback or function() end,
 			Active = false,
 			Holding = false,
 			Window = self.Window,
@@ -1887,7 +1864,29 @@ local Passed, Statement = pcall(function()
 		local Keys = {
 			KeyCodes = {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Z", "X", "C", "V", "B", "N", "M", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Zero", "Insert", "Tab", "Home", "End", "LeftAlt", "LeftControl", "LeftShift", "RightAlt", "RightControl", "RightShift", "CapsLock"},
 			Inputs = {"MouseButton1", "MouseButton2", "MouseButton3"},
-			Shortened = {["MouseButton1"] = "M1", ["MouseButton2"] = "M2", ["MouseButton3"] = "M3", ["Insert"] = "INS", ["LeftAlt"] = "LA", ["LeftControl"] = "LC", ["LeftShift"] = "LS", ["RightAlt"] = "RA", ["RightControl"] = "RC", ["RightShift"] = "RS", ["CapsLock"] = "CL", ["One"] = "1", ["Two"] = "2", ["Three"] = "3", ["Four"] = "4", ["Five"] = "5", ["Six"] = "6", ["Seven"] = "7", ["Eight"] = "8", ["Nine"] = "9", ["Zero"] = "0"}
+			Shortened = {
+				["MouseButton1"] = "M1", 
+				["MouseButton2"] = "M2", 
+				["MouseButton3"] = "M3", 
+				["Insert"] = "INS", 
+				["LeftAlt"] = "LA", 
+				["LeftControl"] = "LC", 
+				["LeftShift"] = "LS", 
+				["RightAlt"] = "RA", 
+				["RightControl"] = "RC", 
+				["RightShift"] = "RS", 
+				["CapsLock"] = "CL", 
+				["One"] = "1", 
+				["Two"] = "2", 
+				["Three"] = "3", 
+				["Four"] = "4", 
+				["Five"] = "5", 
+				["Six"] = "6", 
+				["Seven"] = "7", 
+				["Eight"] = "8", 
+				["Nine"] = "9", 
+				["Zero"] = "0"
+			}
 		}
 		
 		do
@@ -1911,13 +1910,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -41, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Title2 = utility:RenderObject("TextLabel", {
@@ -1930,14 +1929,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -41, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0.5,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Button = utility:RenderObject("TextButton", {
@@ -1960,32 +1959,33 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -61, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = "",
 				TextColor3 = Color3.fromRGB(114, 114, 114),
 				TextStrokeColor3 = Color3.fromRGB(15, 15, 15),
 				TextSize = 9,
 				TextStrokeTransparency = 0,
-				TextXAlignment = "Right"
+				TextXAlignment = Enum.TextXAlignment.Right
 			})
-			
-			function Content:Set(state)
-				Content.State = state or {}
-				Content.Active = false
-				Content_Holder_Value.Text = "[" .. (#Content:Get() > 0 and Content:Shorten(Content:Get()[2]) or "-") .. "]"
-				Content.Callback(Content:Get())
-			end
-			
-			function Content:Get()
-				return Content.State
-			end
 			
 			function Content:Shorten(Str)
 				for Index, Value in pairs(Keys.Shortened) do
 					Str = string.gsub(Str, Index, Value)
 				end
 				return Str
+			end
+			
+			function Content:Set(state)
+				Content.State = state or {}
+				Content.Active = false
+				local text = #Content:Get() > 0 and Content:Shorten(Content:Get()[2]) or "-"
+				Content_Holder_Value.Text = "[" .. text .. "]"
+				Content.Callback(Content:Get())
+			end
+			
+			function Content:Get()
+				return Content.State
 			end
 			
 			function Content:Change(Key)
@@ -2018,7 +2018,8 @@ local Passed, Statement = pcall(function()
 			
 			utility:CreateConnection(uis.InputBegan, function(Input)
 				if Content.Holding then
-					local Success = Content:Change(Input.KeyCode.Name ~= "Unknown" and Input.KeyCode or Input.UserInputType)
+					local key = Input.KeyCode.Name ~= "Unknown" and Input.KeyCode or Input.UserInputType
+					local Success = Content:Change(key)
 					if Success then
 						Content.Holding = false
 						Content_Holder_Value.TextColor3 = Color3.fromRGB(114, 114, 114)
@@ -2026,7 +2027,14 @@ local Passed, Statement = pcall(function()
 				end
 				
 				if Content:Get()[1] and Content:Get()[2] then
-					if Input.KeyCode == Enum[Content:Get()[1]][Content:Get()[2]] or Input.UserInputType == Enum[Content:Get()[1]][Content:Get()[2]] then
+					local keyMatch = false
+					if Content:Get()[1] == "KeyCode" then
+						keyMatch = Input.KeyCode == Enum.KeyCode[Content:Get()[2]]
+					else
+						keyMatch = Input.UserInputType == Enum.UserInputType[Content:Get()[2]]
+					end
+					
+					if keyMatch then
 						if Content.Mode == "Hold" then
 							Content.Active = true
 						elseif Content.Mode == "Toggle" then
@@ -2038,10 +2046,15 @@ local Passed, Statement = pcall(function()
 			
 			utility:CreateConnection(uis.InputEnded, function(Input)
 				if Content:Get()[1] and Content:Get()[2] then
-					if Input.KeyCode == Enum[Content:Get()[1]][Content:Get()[2]] or Input.UserInputType == Enum[Content:Get()[1]][Content:Get()[2]] then
-						if Content.Mode == "Hold" then
-							Content.Active = false
-						end
+					local keyMatch = false
+					if Content:Get()[1] == "KeyCode" then
+						keyMatch = Input.KeyCode == Enum.KeyCode[Content:Get()[2]]
+					else
+						keyMatch = Input.UserInputType == Enum.UserInputType[Content:Get()[2]]
+					end
+					
+					if keyMatch and Content.Mode == "Hold" then
+						Content.Active = false
 					end
 				end
 			end)
@@ -2056,12 +2069,10 @@ local Passed, Statement = pcall(function()
 		Properties = Properties or {}
 		
 		local Content = {
-			Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Colorpicker"),
-			State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or Color3.fromRGB(255, 255, 255)),
-			Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
-			Content = {
-				Open = false
-			},
+			Name = Properties.name or "New Colorpicker",
+			State = Properties.state or Properties.default or Color3.fromRGB(255, 255, 255),
+			Callback = Properties.callback or function() end,
+			Content = {Open = false},
 			Window = self.Window,
 			Page = self.Page,
 			Section = self
@@ -2099,13 +2110,13 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -41, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Title2 = utility:RenderObject("TextLabel", {
@@ -2118,14 +2129,14 @@ local Passed, Statement = pcall(function()
 				Position = UDim2.new(0, 41, 0, 0),
 				Size = UDim2.new(1, -41, 1, 0),
 				ZIndex = 3,
-				Font = "Code",
+				Font = Enum.Font.Code,
 				RichText = true,
 				Text = Content.Name,
 				TextColor3 = Color3.fromRGB(205, 205, 205),
 				TextSize = 9,
 				TextStrokeTransparency = 1,
 				TextTransparency = 0.5,
-				TextXAlignment = "Left"
+				TextXAlignment = Enum.TextXAlignment.Left
 			})
 			
 			local Content_Holder_Button = utility:RenderObject("TextButton", {
@@ -2183,22 +2194,11 @@ local Passed, Statement = pcall(function()
 					ZIndex = 6
 				})
 				
-				local Open_Holder_Button = utility:RenderObject("TextButton", {
-					BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-					BackgroundTransparency = 1,
-					BorderColor3 = Color3.fromRGB(0, 0, 0),
-					BorderSizePixel = 0,
-					Parent = Content_Open_Holder,
-					Position = UDim2.new(0, -1, 0, -1),
-					Size = UDim2.new(1, 2, 1, 2),
-					Text = ""
-				})
-				
 				local Open_Holder_Outline = utility:RenderObject("Frame", {
 					BackgroundColor3 = Color3.fromRGB(60, 60, 60),
 					BackgroundTransparency = 0,
 					BorderColor3 = Color3.fromRGB(12, 12, 12),
-					BorderMode = "Inset",
+					BorderMode = Enum.BorderMode.Inset,
 					BorderSizePixel = 1,
 					Parent = Content_Open_Holder,
 					Position = UDim2.new(0, 0, 0, 0),
@@ -2251,7 +2251,7 @@ local Passed, Statement = pcall(function()
 				})
 				
 				local ValSat_Picker_Color = utility:RenderObject("Frame", {
-					BackgroundColor3 = Color3.fromRGB(255, 12, 12),
+					BackgroundColor3 = Color3.fromRGB(255, 0, 0),
 					BackgroundTransparency = 0,
 					BorderColor3 = Color3.fromRGB(0, 0, 0),
 					BorderSizePixel = 0,
@@ -2261,23 +2261,15 @@ local Passed, Statement = pcall(function()
 					ZIndex = 6
 				})
 				
+				-- Ini hanya placeholder, untuk colorpicker lengkap perlu implementasi lebih lanjut
 				function Content.Content:Close()
 					Content.Content.Open = false
-					
-					for Index, Value in pairs(Connections) do
-						Value:Disconnect()
+					for _, Connection in ipairs(Connections) do
+						Connection:Disconnect()
 					end
-					
-					InputCheck:Disconnect()
-					Content_Open_Holder:Remove()
-					
-					function Content.Content:Refresh() end
-					
-					InputCheck = nil
-					Connections = nil
-				end
-				
-				function Content.Content:Refresh(state)
+					if InputCheck then InputCheck:Disconnect() end
+					Content_Open_Holder:Destroy()
+					Connections = {}
 				end
 				
 				Content.Content.Open = true
@@ -2286,12 +2278,16 @@ local Passed, Statement = pcall(function()
 				InputCheck = utility:CreateConnection(uis.InputBegan, function(Input)
 					if Content.Content.Open and Input.UserInputType == Enum.UserInputType.MouseButton1 then
 						local Mouse = utility:MouseLocation()
-						if not (Mouse.X > Content_Open_Holder.AbsolutePosition.X and Mouse.Y > (Content_Open_Holder.AbsolutePosition.Y + 36) and Mouse.X < (Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X) and Mouse.Y < (Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y + 36)) then
-							if not (Mouse.X > Content_Holder.AbsolutePosition.X and Mouse.Y > (Content_Holder.AbsolutePosition.Y) and Mouse.X < (Content_Holder.AbsolutePosition.X + Content_Holder.AbsoluteSize.X) and Mouse.Y < (Content_Holder.AbsolutePosition.Y + Content_Holder.AbsoluteSize.Y)) then
-								if Content.Content.Open then
-									Content.Section:CloseContent()
-								end
-							end
+						local withinBounds = Mouse.X > Content_Open_Holder.AbsolutePosition.X and 
+										  Mouse.Y > Content_Open_Holder.AbsolutePosition.Y and 
+										  Mouse.X < Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X and 
+										  Mouse.Y < Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y
+						
+						if not withinBounds and not (Mouse.X > Content_Holder.AbsolutePosition.X and 
+						   Mouse.Y > Content_Holder.AbsolutePosition.Y and 
+						   Mouse.X < Content_Holder.AbsolutePosition.X + Content_Holder.AbsoluteSize.X and 
+						   Mouse.Y < Content_Holder.AbsolutePosition.Y + Content_Holder.AbsoluteSize.Y) then
+							Content.Section:CloseContent()
 						end
 					end
 				end)
