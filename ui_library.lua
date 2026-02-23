@@ -100,14 +100,14 @@ local Passed, Statement = pcall(function()
 			
 			-- Main Frame
 			local ScreenGui_MainFrame = utility:RenderObject("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
+				AnchorPoint = Vector2.new(0, 0),
 				BackgroundColor3 = Color3.fromRGB(25, 25, 25),
 				BackgroundTransparency = 0,
 				BorderColor3 = Color3.fromRGB(12, 12, 12),
 				BorderMode = "Inset",
 				BorderSizePixel = 1,
 				Parent = ScreenGui,
-				Position = UDim2.new(0.5, 0, 0.5, 0),
+				Position = UDim2.new(0.5, -330, 0.5, -280),
 				Size = UDim2.new(0, 660, 0, 560)
 			})
 			
@@ -374,13 +374,13 @@ local Passed, Statement = pcall(function()
 			})
 			
 			local Page_Tab_Image = utility:RenderObject("ImageLabel", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
+				AnchorPoint = Vector2.new(0, 0),
 				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 				BackgroundTransparency = 1,
 				BorderColor3 = Color3.fromRGB(0, 0, 0),
 				BorderSizePixel = 0,
 				Parent = Page_Tab,
-				Position = UDim2.new(0.5, 0, 0.5, 0),
+				Position = UDim2.new(0.5, -330, 0.5, -280),
 				Size = Page.Size,
 				ZIndex = 2,
 				Image = Page.Image,
